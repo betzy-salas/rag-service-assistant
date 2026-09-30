@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Assistant · consola de preguntas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #1c2330;
+    --muted: #5a6474;
+    --paper: #f6f7f9;
+    --surface: #ffffff;
+    --line: #d9dee6;
+    --accent: #0e6e6a;
+    --accent-ink: #ffffff;
+    --accent-soft: #e2f1f0;
+    --question: #eef1f4;
+    --danger: #9b2c2c;
+    --danger-soft: #f8e5e5;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --ink: #e6e9ef;
+      --muted: #a2abb9;
+      --paper: #12161d;
+      --surface: #1a2029;
+      --line: #2e3643;
+      --accent: #4fc1bb;
+      --accent-ink: #0c1f1e;
+      --accent-soft: #173331;
+      --question: #222a35;
+      --danger: #ef8f8f;
+      --danger-soft: #361f22;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    display: flex;
+    flex-direction: column;
+  }
+  .wrap { width: 100%; max-width: 780px; margin-inline: auto; padding-inline: 16px; }
+  header { border-bottom: 1px solid var(--line); background: var(--surface); }
+  header .wrap { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; padding-block: 14px; }
+  h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  .endpoint { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  main { flex: 1; overflow-y: auto; }
+  main .wrap { display: flex; flex-direction: column; gap: 20px; padding-block: 24px; }
+  .intro { display: grid; gap: 12px; color: var(--muted); }
+  .intro p { margin: 0; max-width: 62ch; }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; }
+  .examples button {
+    font: inherit; font-size: 13px; color: var(--accent); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer;
+  }
+  .examples button:hover, .examples button:focus-visible { border-color: var(--accent); outline: none; }
+  .turn { display: grid; gap: 10px; }
+  .question {
+    justify-self: end; max-width: 85%; background: var(--question); border-radius: 12px 12px 2px 12px;
+    padding: 10px 14px; white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .question .space { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .answer {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px 12px 12px 2px;
+    padding: 14px 16px; display: grid; gap: 12px;
+  }
+  .answer-text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
+  .sources { display: grid; gap: 6px; }
+  .sources-label, .meta { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .sources ol { margin: 0; padding-left: 20px; display: grid; gap: 2px; }
+  .sources a { color: var(--accent); overflow-wrap: anywhere; }
+  .no-sources { color: var(--muted); font-size: 13px; margin: 0; }
+  .meta { text-transform: none; letter-spacing: 0; }
+  .answer.pending .answer-text { color: var(--muted); }
+  .answer.error { border-color: var(--danger); background: var(--danger-soft); }
+  .answer.error .answer-text { color: var(--danger); }
+  footer { border-top: 1px solid var(--line); background: var(--surface); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  form { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding-block: 14px; }
+  label { font-size: 12px; color: var(--muted); display: grid; gap: 4px; }
+  textarea, input {
+    font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line);
+    border-radius: 8px; padding: 9px 11px; width: 100%;
+  }
+  textarea { resize: vertical; min-height: 64px; max-height: 240px; }
+  textarea:focus, input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .question-field { grid-column: 1 / -1; }
+  .controls { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+  .space-field { width: 160px; }
+  .counter { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; align-self: center; }
+  button[type="submit"] {
+    font: inherit; font-weight: 500; color: var(--accent-ink); background: var(--accent);
+    border: 0; border-radius: 8px; padding: 9px 18px; cursor: pointer;
+  }
+  button[type="submit"]:disabled { opacity: 0.55; cursor: progress; }
+  button[type="submit"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .hint { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin: 0; }
+  @media (max-width: 480px) {
+    .space-field { width: 100%; }
+    .counter { margin-left: 0; }
+    .question { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Assistant · consola de preguntas</h1>
+    <span class="endpoint">POST /questions</span>
+  </div>
+</header>
+
+<main id="conversation" aria-live="polite">
+  <div class="wrap" id="turns">
+    <section class="intro" id="intro">
+      <p>Pregunta sobre la documentación indexada de Confluence. Cada respuesta cita las páginas que usó; si ninguna página es lo bastante parecida a la pregunta, el assistant lo dice y no muestra fuentes.</p>
+      <div class="examples" id="examples">
+        <button type="button">¿Cómo se gestionan los secretos en producción?</button>
+        <button type="button">¿Qué es el motor KV v2 de Vault?</button>
+        <button type="button">¿Cómo solicito acceso a un secreto de producción?</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <form class="wrap" id="form" novalidate>
+    <label class="question-field" for="question">Pregunta
+      <textarea id="question" name="question" maxlength="2000" required placeholder="Escribe tu pregunta…"></textarea>
+    </label>
+    <div class="controls">
+      <label class="space-field" for="spaceKey">Espacio (opcional)
+        <input id="spaceKey" name="spaceKey" maxlength="255" placeholder="Todos" autocomplete="off">
+      </label>
+      <span class="counter" id="counter">0 / 2000</span>
+      <button type="submit" id="send">Preguntar</button>
+    </div>
+    <p class="hint">Intro envía · Mayús + Intro añade una línea</p>
+  </form>
+</footer>
+
+<script>
+  const QUESTIONS_URL = "/questions";
+  const MAX_LENGTH = 2000;
+  const SPACE_STORAGE_KEY = "assistant.spaceKey";
+
+  const form = document.getElementById("form");
+  const questionInput = document.getElementById("question");
+  const spaceInput = document.getElementById("spaceKey");
+  const sendButton = document.getElementById("send");
+  const counter = document.getElementById("counter");
+  const turns = document.getElementById("turns");
+  const conversation = document.getElementById("conversation");
+  const intro = document.getElementById("intro");
+
+  // Storage can be unavailable (private windows, blocked site data); the page works without it.
+  try { spaceInput.value = localStorage.getItem(SPACE_STORAGE_KEY) ?? ""; } catch { /* ignored */ }
+
+  document.getElementById("examples").addEventListener("click", (event) => {
+    if (event.target instanceof HTMLButtonElement) {
+      questionInput.value = event.target.textContent;
+      updateCounter();
+      form.requestSubmit();
+    }
+  });
+
+  questionInput.addEventListener("input", updateCounter);
+  questionInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const question = questionInput.value.trim();
+    const spaceKey = spaceInput.value.trim();
+    if (!question || sendButton.disabled) {
+      questionInput.focus();
+      return;
+    }
+    try { localStorage.setItem(SPACE_STORAGE_KEY, spaceKey); } catch { /* ignored */ }
+
+    intro.hidden = true;
+    const answer = addTurn(question, spaceKey);
+    setBusy(true);
+    questionInput.value = "";
+    updateCounter();
+
+    const startedAt = performance.now();
+    try {
+      const response = await fetch(QUESTIONS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(spaceKey ? { question, spaceKey } : { question }),
+      });
+      const body = await response.json().catch(() => null);
+      const seconds = ((performance.now() - startedAt) / 1000).toFixed(1);
+      if (response.ok && body) {
+        showAnswer(answer, body, seconds);
+      } else {
+        showError(answer, problemMessage(response.status, body), seconds);
+      }
+    } catch {
+      showError(answer, "No se pudo conectar con el assistant. Comprueba que el servicio está arrancado.", null);
+    } finally {
+      setBusy(false);
+      questionInput.focus();
+    }
+  });
+
+  function addTurn(question, spaceKey) {
+    const turn = element("div", "turn");
+    const bubble = element("div", "question", question);
+    if (spaceKey) {
+      bubble.append(element("span", "space", "Espacio: " + spaceKey));
+    }
+    const answer = element("div", "answer pending");
+    answer.append(element("p", "answer-text", "Buscando en la documentación…"));
+    turn.append(bubble, answer);
+    turns.append(turn);
+    scrollToEnd();
+    return answer;
+  }
+
+  function showAnswer(answer, body, seconds) {
+    answer.className = "answer";
+    answer.replaceChildren(element("p", "answer-text", body.answer ?? ""));
+    const sources = Array.isArray(body.sources) ? body.sources : [];
+    const block = element("div", "sources");
+    if (sources.length > 0) {
+      block.append(element("span", "sources-label", "Fuentes"));
+      const list = element("ol");
+      for (const source of sources) {
+        const link = element("a", null, source.title || source.url);
+        link.href = source.url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        const item = element("li");
+        item.append(link);
+        list.append(item);
+      }
+      block.append(list);
+    } else {
+      block.append(element("p", "no-sources", "Sin fuentes: ninguna página superó el umbral de similitud."));
+    }
+    answer.append(block, element("span", "meta", seconds + " s"));
+    scrollToEnd();
+  }
+
+  function showError(answer, message, seconds) {
+    answer.className = "answer error";
+    answer.replaceChildren(element("p", "answer-text", message));
+    if (seconds) {
+      answer.append(element("span", "meta", seconds + " s"));
+    }
+    scrollToEnd();
+  }
+
+  /** Builds a readable message from an RFC 9457 problem detail, falling back to the status code. */
+  function problemMessage(status, body) {
+    const detail = body && (body.detail || body.title);
+    return "Error " + status + (detail ? ": " + detail : "");
+  }
+
+  function setBusy(busy) {
+    sendButton.disabled = busy;
+    sendButton.textContent = busy ? "Preguntando…" : "Preguntar";
+  }
+
+  function updateCounter() {
+    counter.textContent = questionInput.value.length + " / " + MAX_LENGTH;
+  }
+
+  function scrollToEnd() {
+    conversation.scrollTop = conversation.scrollHeight;
+  }
+
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+</script>
+</body>
+</html>
